@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useMember } from "@/hooks/useMember";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { comingLabel, notComingLabel } from "@/lib/gender";
+import { Gender } from "@/types";
+import { FaCheck, FaXmark } from "react-icons/fa6";
 
 interface RegistrationButtonProps {
   eventDate: string;
@@ -24,15 +26,27 @@ export function RegistrationButton({
 }: RegistrationButtonProps) {
   const { memberId } = useMember();
   const [isLoading, setIsLoading] = useState(false);
+  const [gender, setGender] = useState<Gender>("plural");
 
-  // Dynamic label based on event type and registration status
+  // Fetch current member's gender for conjugation
+  useEffect(() => {
+    if (!memberId) return;
+    async function fetchGender() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("members")
+        .select("gender")
+        .eq("id", memberId)
+        .single();
+      if (data?.gender) setGender(data.gender as Gender);
+    }
+    fetchGender();
+  }, [memberId]);
+
+  // Dynamic gendered label
   const label = isRegistered
-    ? eventType === "shabbat"
-      ? "אנחנו לא מגיעים בשבת"
-      : "אנחנו לא מגיעים לחג"
-    : eventType === "shabbat"
-      ? "אנחנו מגיעים בשבת!"
-      : "אנחנו מגיעים לחג!";
+    ? notComingLabel(gender, eventType)
+    : comingLabel(gender, eventType);
 
   // Handle registration toggle
   const handleClick = async () => {
@@ -43,14 +57,12 @@ export function RegistrationButton({
       const supabase = createClient();
 
       if (isRegistered) {
-        // Unregister
         await supabase
           .from("event_registrations")
           .delete()
           .eq("member_id", memberId)
           .eq("event_date", eventDate);
       } else {
-        // Register
         await supabase
           .from("event_registrations")
           .insert({ member_id: memberId, event_date: eventDate });
@@ -80,7 +92,7 @@ export function RegistrationButton({
         isRegistered ? "✓" : "+"
       ) : (
         <span className="flex items-center gap-2">
-          {isRegistered ? <FaTimes className="w-4 h-4" /> : <FaCheck className="w-4 h-4" />}
+          {isRegistered ? <FaXmark className="w-4 h-4" /> : <FaCheck className="w-4 h-4" />}
           {label}
         </span>
       )}

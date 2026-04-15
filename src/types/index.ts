@@ -1,10 +1,23 @@
+// Gender type for Hebrew UI conjugation
+export type Gender = "male" | "female" | "plural";
+
 // Member in the family
 export interface Member {
   id: string;
   name: string;
   is_admin: boolean;
   always_attending: boolean;
+  gender: Gender;
   display_order: number;
+  created_at: string;
+}
+
+// Guest attending a specific event
+export interface EventGuest {
+  id: string;
+  event_date: string;
+  name: string;
+  added_by: string | null;
   created_at: string;
 }
 

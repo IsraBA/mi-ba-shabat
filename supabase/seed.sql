@@ -6,18 +6,18 @@ INSERT INTO members (name, is_admin, display_order) VALUES
   ('רני ומרדכי', FALSE, 4),
   ('אריאל ואודליה', FALSE, 5),
   ('ישראל', TRUE, 6),
-  ('נעמה ואלרועי', FALSE, 7),
+  ('נעמה ואלרואי', FALSE, 7),
   ('מוריה ושבי', FALSE, 8),
   ('אילה', FALSE, 9),
   ('צביקי', FALSE, 10),
-  ('אורה לי', FALSE, 11);
+  ('אורהלי', FALSE, 11);
 
 -- Seed rooms in the parents' house
 INSERT INTO rooms (name, description, display_order) VALUES
   ('סלון', NULL, 1),
   ('ממ"ד', NULL, 2),
   ('החדר של צביקי', NULL, 3),
-  ('החדר של אורה לי', NULL, 4),
+  ('החדר של אורהלי', NULL, 4),
   ('החדר של אילה', NULL, 5),
   ('החדר של אריאל', NULL, 6),
   ('החדר של ישראל', NULL, 7),

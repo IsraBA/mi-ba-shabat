@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useMember } from "@/hooks/useMember";
 import { isPastDate } from "@/lib/hebcal";
 import { TASK_CATEGORIES } from "@/lib/constants";
+import { claimedLabel } from "@/lib/gender";
+import { Gender } from "@/types";
 import { Button } from "@/components/ui/button";
 import { TaskIcon } from "@/components/tasks/TaskIcon";
 import { AddTaskDialog } from "@/components/tasks/AddTaskDialog";
@@ -38,6 +40,7 @@ export function TasksTab({ eventDate }: TasksTabProps) {
   const { memberId } = useMember();
   const [tasks, setTasks] = useState<EventTask[]>([]);
   const [members, setMembers] = useState<Map<string, Member>>(new Map());
+  const [myGender, setMyGender] = useState<Gender>("plural");
   const [isLoading, setIsLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [deletingTask, setDeletingTask] = useState<EventTask | null>(null);
@@ -84,6 +87,12 @@ export function TasksTab({ eventDate }: TasksTabProps) {
       const map = new Map<string, Member>();
       memberData.forEach((m) => map.set(m.id, m));
       setMembers(map);
+
+      // Set current user's gender for claim button text
+      if (memberId) {
+        const me = map.get(memberId);
+        if (me) setMyGender(me.gender);
+      }
     }
 
     setIsLoading(false);
@@ -244,7 +253,7 @@ export function TasksTab({ eventDate }: TasksTabProps) {
                               {claimedMember.name}
                             </span>
                           ) : (
-                            "לקחתי!"
+                            claimedLabel(myGender)
                           )}
                         </Button>
                       )}

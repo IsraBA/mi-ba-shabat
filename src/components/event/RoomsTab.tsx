@@ -60,8 +60,27 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
       setMembers(membersRes.data);
       const me = membersRes.data.find((m) => m.id === memberId);
       setCurrentMember(me || null);
-    }
-    if (regsRes.data) {
+
+      // Auto-register always-attending members if not already registered
+      if (!past) {
+        const regIds = new Set(regsRes.data?.map((r) => r.member_id) || []);
+        const toRegister = membersRes.data.filter(
+          (m) => m.always_attending && !regIds.has(m.id)
+        );
+        for (const m of toRegister) {
+          await supabase
+            .from("event_registrations")
+            .upsert(
+              { member_id: m.id, event_date: eventDate },
+              { onConflict: "member_id,event_date" }
+            );
+          regIds.add(m.id);
+        }
+        setRegisteredIds(regIds);
+      } else if (regsRes.data) {
+        setRegisteredIds(new Set(regsRes.data.map((r) => r.member_id)));
+      }
+    } else if (regsRes.data) {
       setRegisteredIds(new Set(regsRes.data.map((r) => r.member_id)));
     }
     setIsLoading(false);
@@ -165,8 +184,8 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
     }
   }
 
-  // Registered but unassigned members
-  const registeredMembers = members.filter((m) => registeredIds.has(m.id));
+  // Registered members eligible for room assignment (exclude parents — they live there)
+  const registeredMembers = members.filter((m) => registeredIds.has(m.id) && !m.always_attending);
   const unassignedMembers = registeredMembers.filter((m) => !assignedMemberIds.has(m.id));
 
   const canEdit = isAdmin(currentMember) && !past;
