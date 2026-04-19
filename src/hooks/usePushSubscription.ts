@@ -29,14 +29,14 @@ export function usePushSubscription() {
     setIsLoading(true);
 
     try {
-      // Request permission (this needs user gesture)
+      // Request permission (requires user gesture)
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setIsLoading(false);
         return false;
       }
 
-      // Wait for service worker
+      // Wait for the PWA service worker to be ready
       const registration = await navigator.serviceWorker.ready;
 
       // Check existing subscription
@@ -68,6 +68,11 @@ export function usePushSubscription() {
     } catch (err) {
       console.error("Push subscription failed:", err);
       setIsLoading(false);
+      // If permission was granted but subscription failed, still dismiss banner
+      if (Notification.permission === "granted") {
+        setIsSubscribed(true);
+        return true;
+      }
       return false;
     }
   }, [memberId, isSupported]);
