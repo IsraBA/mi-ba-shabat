@@ -13,8 +13,23 @@ const heebo = Heebo({
 
 export const metadata: Metadata = {
   title: "מי בא שבת",
-  description: "אפליקציה משפחתית לתיאום שבתות וחגים",
+  description: "האפליקציה המדוברת כבר שנים סוף סוף כאן. כולל חלוקת משימות וחדרים 💪",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "מי בא שבת",
+    description: "האפליקציה המדוברת כבר שנים סוף סוף כאן. כולל חלוקת משימות וחדרים 💪",
+    images: [{ url: "/icons/og-image.png", width: 1200, height: 630 }],
+    locale: "he_IL",
+    type: "website",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const viewport: Viewport = {

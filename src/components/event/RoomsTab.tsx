@@ -146,6 +146,22 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
           assigned_by: memberId,
         }))
       );
+
+      // Send room assignment notifications to newly assigned members
+      const room = rooms.find((r) => r.id === roomId);
+      for (const mid of toAdd) {
+        fetch("/api/notifications/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "room_assigned",
+            member_id: mid,
+            event_date: eventDate,
+            event_type: "shabbat",
+            room_name: room?.name || "",
+          }),
+        }).catch(() => {});
+      }
     }
 
     setEditingRoom(null);

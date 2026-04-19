@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/notifications?type=registration_reminder",
+      "schedule": "0 16 * * 2"
+    },
+    {
+      "path": "/api/cron/notifications?type=registration_reminder_urgent",
+      "schedule": "0 16 * * 4"
+    },
+    {
+      "path": "/api/cron/notifications?type=friday_summary",
+      "schedule": "0 7 * * 5"
+    },
+    {
+      "path": "/api/cron/notifications?type=task_king",
+      "schedule": "0 7 * * 0"
+    }
+  ]
+}

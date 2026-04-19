@@ -68,6 +68,18 @@ export function RegistrationButton({
           .insert({ member_id: memberId, event_date: eventDate });
       }
 
+      // Send notification to other members about registration/cancellation
+      fetch("/api/notifications/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: isRegistered ? "member_cancelled" : "member_registered",
+          member_id: memberId,
+          event_date: eventDate,
+          event_type: eventType,
+        }),
+      }).catch(() => {});
+
       onToggle();
     } finally {
       setIsLoading(false);

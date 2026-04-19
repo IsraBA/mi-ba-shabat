@@ -58,7 +58,7 @@ export function Modal({ open, onClose, children, className, dismissable = true }
       {/* Backdrop with subtle blur */}
       <div
         className={cn(
-          "absolute inset-0 bg-black/20 backdrop-blur-[4px] transition-opacity duration-200 ease-out",
+          "absolute inset-0 bg-black/20 backdrop-blur-xs transition-opacity duration-200 ease-out",
           animateIn ? "opacity-100" : "opacity-0"
         )}
         onClick={dismissable ? onClose : undefined}
