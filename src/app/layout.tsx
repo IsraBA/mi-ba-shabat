@@ -3,6 +3,7 @@ import { Heebo } from "next/font/google";
 import { Providers } from "@/components/layout/Providers";
 import { Header } from "@/components/layout/Header";
 import { MemberSelector } from "@/components/layout/MemberSelector";
+import { NotificationBanner } from "@/components/layout/NotificationBanner";
 import "./globals.css";
 
 // Load Heebo font - clean Hebrew sans-serif, great for UI
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="h-full flex flex-col font-(family-name:--font-heebo) antialiased">
         <Providers>
           <Header />
+          <NotificationBanner />
           <main className="flex-1 overflow-auto">{children}</main>
           <MemberSelector />
         </Providers>

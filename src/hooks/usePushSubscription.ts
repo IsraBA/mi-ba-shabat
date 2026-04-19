@@ -1,67 +1,78 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useMember } from "./useMember";
 
-// Hook that subscribes the current member to push notifications
+// Hook that provides a function to subscribe to push notifications
+// Must be triggered by user interaction (button click), not automatically
 export function usePushSubscription() {
-  const { memberId, isLoaded } = useMember();
-  const subscribedRef = useRef(false);
+  const { memberId } = useMember();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!isLoaded || !memberId || subscribedRef.current) return;
+  // Check if push is supported
+  const isSupported =
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window;
 
-    // Don't run in development (no service worker)
-    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  // Check current permission state
+  const permissionState =
+    typeof window !== "undefined" && "Notification" in window
+      ? Notification.permission
+      : "default";
 
-    async function subscribe() {
-      try {
-        // Wait for service worker to be ready
-        const registration = await navigator.serviceWorker.ready;
+  // Subscribe to push — must be called from a user gesture (click)
+  const subscribe = useCallback(async () => {
+    if (!memberId || !isSupported) return false;
+    setIsLoading(true);
 
-        // Check if already subscribed
-        const existing = await registration.pushManager.getSubscription();
-        if (existing) {
-          // Send existing subscription to server (in case member changed)
-          await saveSubscription(memberId!, existing);
-          subscribedRef.current = true;
-          return;
-        }
+    try {
+      // Request permission (this needs user gesture)
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setIsLoading(false);
+        return false;
+      }
 
-        // Request permission
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return;
+      // Wait for service worker
+      const registration = await navigator.serviceWorker.ready;
 
-        // Subscribe to push
-        const subscription = await registration.pushManager.subscribe({
+      // Check existing subscription
+      let subscription = await registration.pushManager.getSubscription();
+
+      // Create new subscription if needed
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(
             process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
           ) as BufferSource,
         });
-
-        // Save subscription to server
-        await saveSubscription(memberId!, subscription);
-        subscribedRef.current = true;
-      } catch (err) {
-        console.error("Push subscription failed:", err);
       }
+
+      // Save to server
+      await fetch("/api/notifications/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          member_id: memberId,
+          subscription: subscription.toJSON(),
+        }),
+      });
+
+      setIsSubscribed(true);
+      setIsLoading(false);
+      return true;
+    } catch (err) {
+      console.error("Push subscription failed:", err);
+      setIsLoading(false);
+      return false;
     }
+  }, [memberId, isSupported]);
 
-    subscribe();
-  }, [isLoaded, memberId]);
-}
-
-// Save subscription to the API
-async function saveSubscription(memberId: string, subscription: PushSubscription) {
-  await fetch("/api/notifications/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      member_id: memberId,
-      subscription: subscription.toJSON(),
-    }),
-  });
+  return { subscribe, isSubscribed, isLoading, isSupported, permissionState };
 }
 
 // Convert VAPID key from base64 to Uint8Array
