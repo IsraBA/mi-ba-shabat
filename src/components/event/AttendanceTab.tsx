@@ -184,6 +184,7 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
       {showAddGuest && (
         <AddGuestDialog
           eventDate={eventDate}
+          eventType={eventType}
           memberId={memberId}
           onClose={() => setShowAddGuest(false)}
           onAdded={fetchData}
@@ -205,11 +206,13 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
 // Dialog for adding a guest
 function AddGuestDialog({
   eventDate,
+  eventType,
   memberId,
   onClose,
   onAdded,
 }: {
   eventDate: string;
+  eventType: "shabbat" | "holiday";
   memberId: string | null;
   onClose: () => void;
   onAdded: () => void;
@@ -227,6 +230,19 @@ function AddGuestDialog({
       name: name.trim(),
       added_by: memberId,
     });
+
+    // Notify everyone about the guest
+    fetch("/api/notifications/trigger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "guest_added",
+        member_id: memberId,
+        event_date: eventDate,
+        event_type: eventType,
+        guest_name: name.trim(),
+      }),
+    }).catch(() => {});
 
     onAdded();
     onClose();

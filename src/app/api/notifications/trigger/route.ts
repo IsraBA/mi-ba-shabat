@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendPushToMembers, sendPushToAllExcept } from "@/lib/push";
-import { memberRegistered, memberCancelled, roomAssigned } from "@/lib/notifications";
+import { memberRegistered, memberCancelled, roomAssigned, guestAdded } from "@/lib/notifications";
 import { Gender } from "@/types";
 
 // POST - Trigger a notification based on an event
@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
       const payload = roomAssigned(gender, room_name, eType);
       payload.url = `/event/${event_date}`;
       await sendPushToMembers([member_id], payload);
+      break;
+    }
+
+    case "guest_added": {
+      // Notify everyone that a guest is coming
+      const { guest_name } = body;
+      const payload = guestAdded(guest_name, eType);
+      payload.url = `/event/${event_date}`;
+      await sendPushToAllExcept(member_id, payload);
       break;
     }
 

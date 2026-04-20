@@ -81,7 +81,16 @@ export function fridaySummary(unclaimedCount: number): NotificationPayload {
   };
 }
 
-// 7. Task king - always "הריעו לשיראל" (Sunday 10:00)
+// 7. Guest added (immediate, sent to everyone)
+export function guestAdded(guestName: string, eventType: "shabbat" | "holiday"): NotificationPayload {
+  const ev = eventLabel(eventType, "ה");
+  return {
+    title: APP_TITLE,
+    body: `יש אורחים ${ev}! ${guestName} ✌️`,
+  };
+}
+
+// 8. Task king - always "הריעו לשיראל" (Sunday 10:00)
 export function taskKing(topMemberName: string, topMemberGender: Gender, eventType: "shabbat" | "holiday"): NotificationPayload {
   const ev = eventLabel(eventType, "ה");
   const detail = gendered(topMemberGender, `${topMemberName} הוא זה שלקח הכי הרבה משימות ${ev}`, `${topMemberName} היא זאת שלקחה הכי הרבה משימות ${ev}`, `${topMemberName} הם אלה שלקחו הכי הרבה משימות ${ev}`);
