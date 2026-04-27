@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
     .lte("event_date", nextWeekStr);
 
   const registeredMemberIds = new Set(registrations?.map((r) => r.member_id) || []);
-  const eventDate = registrations?.[0]?.event_date || null;
 
   // Determine event type (default to shabbat)
   const eventType: "shabbat" | "holiday" = "shabbat";
@@ -92,28 +91,38 @@ export async function GET(request: NextRequest) {
 
     // Friday 10:00 - Summary for attendees
     case "friday_summary": {
-      if (!eventDate) {
+      // Find the soonest upcoming event_date in the window
+      const upcomingDate = registrations
+        ?.map((r) => r.event_date)
+        .sort()[0] || null;
+
+      if (!upcomingDate) {
         return NextResponse.json({ sent: 0, message: "No upcoming event" });
       }
 
-      // Count unclaimed tasks
+      // Count unclaimed tasks for that specific event
       const { count: unclaimedCount } = await supabase
         .from("event_tasks")
         .select("id", { count: "exact", head: true })
-        .eq("event_date", eventDate)
+        .eq("event_date", upcomingDate)
         .is("claimed_by", null);
 
       if (!unclaimedCount || unclaimedCount === 0) {
         return NextResponse.json({ sent: 0, message: "All tasks claimed" });
       }
 
-      // Send to registered members only
+      // Only members registered for THIS specific event should receive the summary
+      const attendeesForEvent = new Set(
+        registrations
+          ?.filter((r) => r.event_date === upcomingDate)
+          .map((r) => r.member_id) || []
+      );
       const attendeeIds = allMembers
-        .filter((m) => registeredMemberIds.has(m.id))
+        .filter((m) => attendeesForEvent.has(m.id))
         .map((m) => m.id);
 
       const payload = fridaySummary(unclaimedCount);
-      payload.url = eventDate ? `/event/${eventDate}` : "/calendar";
+      payload.url = `/event/${upcomingDate}`;
       await sendPushToMembers(attendeeIds, payload);
 
       return NextResponse.json({ sent: attendeeIds.length, type });

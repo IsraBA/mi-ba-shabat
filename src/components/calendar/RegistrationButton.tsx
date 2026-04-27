@@ -57,12 +57,30 @@ export function RegistrationButton({
       const supabase = createClient();
 
       if (isRegistered) {
+        // Insert opt-out FIRST so the realtime delete event won't trigger an auto-re-register
+        const { error: optOutError } = await supabase
+          .from("event_opt_outs")
+          .upsert(
+            { member_id: memberId, event_date: eventDate },
+            { onConflict: "member_id,event_date" }
+          );
+        if (optOutError) {
+          console.error("Failed to write opt-out:", optOutError);
+          alert("שגיאה ברישום ביטול: " + optOutError.message);
+          return;
+        }
         await supabase
           .from("event_registrations")
           .delete()
           .eq("member_id", memberId)
           .eq("event_date", eventDate);
       } else {
+        // Clear any prior opt-out FIRST, then insert the registration
+        await supabase
+          .from("event_opt_outs")
+          .delete()
+          .eq("member_id", memberId)
+          .eq("event_date", eventDate);
         await supabase
           .from("event_registrations")
           .insert({ member_id: memberId, event_date: eventDate });

@@ -5,7 +5,7 @@ import { EventTask, Member } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { useMember } from "@/hooks/useMember";
 import { isPastDate } from "@/lib/hebcal";
-import { TASK_CATEGORIES } from "@/lib/constants";
+import { TASK_CATEGORIES, withDarkVariant } from "@/lib/constants";
 import { claimedLabel } from "@/lib/gender";
 import { Gender } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -199,7 +199,7 @@ export function TasksTab({ eventDate }: TasksTabProps) {
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-lg border transition-all duration-300",
                       task.is_done && "opacity-60",
-                      task.color || "bg-background",
+                      task.color ? withDarkVariant(task.color) : "bg-background",
                       isMyTask && !task.is_done && "ring-1 ring-primary/30"
                     )}
                   >

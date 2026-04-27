@@ -45,8 +45,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Inline script applies the saved theme before paint to prevent flash
+  const themeScript = `
+    try {
+      var m = localStorage.getItem('theme_mode') || 'system';
+      var d = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (d) document.documentElement.classList.add('dark');
+    } catch (e) {}
+  `;
+
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} h-full`}>
+    <html lang="he" dir="rtl" className={`${heebo.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="h-full flex flex-col font-(family-name:--font-heebo) antialiased">
         <Providers>
           <Header />

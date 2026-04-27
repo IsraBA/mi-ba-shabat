@@ -35,15 +35,27 @@ function hebrewYearDisplay(year: number): string {
 
 // Main Hebrew calendar component navigating by Hebrew months
 export function HebrewCalendar() {
-  const today = new Date();
   const router = useRouter();
   const currentHeb = getCurrentHebrewDate();
+  // Track client mount to avoid SSR/SSG baking the build-time date into "today" highlight and current month
+  const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState<Date>(() => new Date());
   const [hebYear, setHebYear] = useState(currentHeb.year);
   const [hebMonth, setHebMonth] = useState(currentHeb.month);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({});
   const [myRegistrations, setMyRegistrations] = useState<Set<string>>(new Set());
   const { memberId } = useMember();
+
+  // Re-sync today and current Hebrew month on client mount (fixes stale dates from SSG/cached HTML)
+  useEffect(() => {
+    const now = new Date();
+    setToday(now);
+    const heb = getCurrentHebrewDate();
+    setHebYear(heb.year);
+    setHebMonth(heb.month);
+    setMounted(true);
+  }, []);
 
   // Get month info for display
   const monthInfo = getHebrewMonthInfo(new HDate(1, hebMonth, hebYear));
@@ -165,7 +177,7 @@ export function HebrewCalendar() {
         {days.map((day) => {
           const dateStr = day.date.toISOString().split("T")[0];
           const event = eventMap.get(dateStr);
-          const isToday = day.date.toDateString() === today.toDateString();
+          const isToday = mounted && day.date.toDateString() === today.toDateString();
           const past = isPastDate(day.date);
           const isSaturday = day.date.getDay() === 6;
           const regCount = registrationCounts[dateStr] || 0;
@@ -179,8 +191,8 @@ export function HebrewCalendar() {
               className={cn(
                 "relative p-1 text-center flex flex-col min-h-0 transition-colors",
                 isToday && "shadow-[inset_0_0_0_2px_oklch(0.5_0.2_260)]",
-                !past && event?.type === "shabbat" && "bg-violet-50",
-                !past && event?.type === "holiday" && "bg-amber-50",
+                !past && event?.type === "shabbat" && "bg-violet-50 dark:bg-violet-500/25",
+                !past && event?.type === "holiday" && "bg-amber-50 dark:bg-amber-500/25",
                 past && "bg-muted/60 text-muted-foreground",
                 !past && isSaturday && !event && "bg-muted/30",
                 isClickable && "cursor-pointer hover:brightness-90 transition-[filter]"
@@ -200,7 +212,7 @@ export function HebrewCalendar() {
                   <div
                     className={cn(
                       "text-[9px] leading-tight font-medium truncate",
-                      event.type === "shabbat" ? "text-violet-700" : "text-amber-700"
+                      event.type === "shabbat" ? "text-violet-700 dark:text-violet-300" : "text-amber-700 dark:text-amber-300"
                     )}
                   >
                     {event.title}
@@ -211,7 +223,7 @@ export function HebrewCalendar() {
                       variant="secondary"
                       className={cn(
                         "text-[9px] px-1 py-0 mt-0.5",
-                        isMyReg && "bg-green-100 text-green-700"
+                        isMyReg && "bg-green-100 text-green-700 dark:bg-green-500/30 dark:text-green-200"
                       )}
                     >
                       {regCount} מגיעים

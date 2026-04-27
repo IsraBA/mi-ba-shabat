@@ -24,8 +24,8 @@ export function EventHeader({ event }: EventHeaderProps) {
         variant="secondary"
         className={
           event.type === "shabbat"
-            ? "bg-violet-100 text-violet-700"
-            : "bg-amber-100 text-amber-700"
+            ? "bg-violet-100 text-violet-700 dark:bg-violet-500/30 dark:text-violet-200"
+            : "bg-amber-100 text-amber-700 dark:bg-amber-500/30 dark:text-amber-200"
         }
       >
         {event.type === "shabbat" ? "שבת" : "חג"}

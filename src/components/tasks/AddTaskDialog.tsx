@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Modal, ModalTitle } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { TaskIcon, AVAILABLE_ICONS } from "./TaskIcon";
-import { TASK_CATEGORIES, TASK_COLORS } from "@/lib/constants";
+import { TASK_CATEGORIES, TASK_COLORS, withDarkVariant } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface AddTaskDialogProps {
@@ -114,9 +114,9 @@ export function AddTaskDialog({ eventDate, onClose, onAdded }: AddTaskDialogProp
                 onClick={() => setColor(c.bg)}
                 className={cn(
                   "w-8 h-8 rounded-full transition-all border-2",
-                  c.bg,
+                  withDarkVariant(c.bg),
                   color === c.bg
-                    ? `scale-110 ${c.border}`
+                    ? `scale-110 ${withDarkVariant(c.border)}`
                     : "border-transparent opacity-70 hover:opacity-100 hover:scale-105"
                 )}
               />

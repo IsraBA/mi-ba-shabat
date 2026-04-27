@@ -227,7 +227,7 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
     <div className="p-4 space-y-4">
       {/* Unassigned members notice (admin only) */}
       {canEdit && unassignedMembers.length > 0 && (
-        <div className="text-sm text-center text-amber-600 bg-amber-50 p-2 rounded-lg">
+        <div className="text-sm text-center text-amber-600 dark:text-amber-200 bg-amber-50 dark:bg-amber-500/25 p-2 rounded-lg">
           עוד לא שובצו: {unassignedMembers.map((m) => m.name).join(", ")}
         </div>
       )}
@@ -244,7 +244,7 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
               key={room.id}
               className={cn(
                 "p-4 rounded-lg border transition-colors",
-                hasMembers ? "bg-green-50 border-green-200" : "bg-muted/30"
+                hasMembers ? "bg-green-50 dark:bg-green-500/25 border-green-200 dark:border-green-500/50" : "bg-muted/30"
               )}
             >
               {/* Room header */}
@@ -284,7 +284,7 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
                   {roomMembers.map((m) => (
                     <span
                       key={m.id}
-                      className="inline-flex items-center gap-1 text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 text-sm bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200 px-2 py-0.5 rounded-full"
                     >
                       <FaUser className="w-3 h-3" />
                       {m.name}

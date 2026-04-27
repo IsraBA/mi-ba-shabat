@@ -65,8 +65,8 @@ export function NotificationBanner() {
   );
 
   return (
-    <div className="mx-3 mt-2 p-3 rounded-lg bg-violet-50 border border-violet-200 flex items-center gap-3">
-      <FaBell className="w-5 h-5 text-violet-600 shrink-0" />
+    <div className="mx-3 mt-2 p-3 rounded-lg bg-violet-50 dark:bg-violet-500/25 border border-violet-200 dark:border-violet-500/50 flex items-center gap-3">
+      <FaBell className="w-5 h-5 text-violet-600 dark:text-violet-200 shrink-0" />
       <p className="text-sm flex-1">{prompt}</p>
       <Button
         size="sm"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Member, EventGuest } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { useMember } from "@/hooks/useMember";
@@ -43,44 +43,54 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
   const [deletingGuest, setDeletingGuest] = useState<EventGuest | null>(null);
   const past = isPastDate(new Date(eventDate));
 
-  // Fetch all family members and guests
+  // Fetch members and guests (does NOT auto-register — that's a separate one-shot effect below)
   const fetchData = useCallback(async () => {
     const supabase = createClient();
-
     const [membersRes, guestsRes] = await Promise.all([
       supabase.from("members").select("*").order("display_order"),
       supabase.from("event_guests").select("*").eq("event_date", eventDate).order("created_at"),
     ]);
-
-    if (membersRes.data) {
-      setMembers(membersRes.data);
-
-      // Auto-register always-attending members for future events
-      if (!past) {
-        const alwaysAttending = membersRes.data.filter((m) => m.always_attending);
-        for (const member of alwaysAttending) {
-          const alreadyRegistered = registrations.some(
-            (r) => r.member_id === member.id
-          );
-          if (!alreadyRegistered) {
-            await supabase
-              .from("event_registrations")
-              .upsert(
-                { member_id: member.id, event_date: eventDate },
-                { onConflict: "member_id,event_date" }
-              );
-          }
-        }
-      }
-    }
-
+    if (membersRes.data) setMembers(membersRes.data);
     if (guestsRes.data) setGuests(guestsRes.data);
     setMembersLoading(false);
-  }, [eventDate, past, registrations]);
+  }, [eventDate]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Auto-register always-attending members ONCE per mount, after initial data is loaded.
+  // Pulled out of fetchData so it doesn't re-fire when registrations change (which would
+  // re-register members the moment they cancel — a race condition with the opt-out write).
+  const autoRegisterRan = useRef(false);
+  useEffect(() => {
+    if (autoRegisterRan.current) return;
+    if (past || isLoading || membersLoading || members.length === 0) return;
+    autoRegisterRan.current = true;
+
+    async function autoRegister() {
+      const supabase = createClient();
+      const { data: optOuts } = await supabase
+        .from("event_opt_outs")
+        .select("member_id")
+        .eq("event_date", eventDate);
+
+      const optedOutIds = new Set((optOuts || []).map((o) => o.member_id));
+      const registeredIds = new Set(registrations.map((r) => r.member_id));
+      const toRegister = members.filter(
+        (m) => m.always_attending && !optedOutIds.has(m.id) && !registeredIds.has(m.id)
+      );
+      if (toRegister.length === 0) return;
+
+      await supabase
+        .from("event_registrations")
+        .upsert(
+          toRegister.map((m) => ({ member_id: m.id, event_date: eventDate })),
+          { onConflict: "member_id,event_date" }
+        );
+    }
+    autoRegister();
+  }, [eventDate, past, isLoading, membersLoading, members, registrations]);
 
   // Show skeleton while loading
   if (isLoading || membersLoading) {
@@ -128,10 +138,10 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
           {guests.map((guest) => (
             <div
               key={guest.id}
-              className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 border-blue-200"
+              className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 dark:bg-blue-500/25 border-blue-200 dark:border-blue-500/50"
             >
               <span className="font-medium flex items-center gap-2">
-                <FaUserPlus className="w-3.5 h-3.5 text-blue-500" />
+                <FaUserPlus className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                 {guest.name}
                 <span className="text-xs text-muted-foreground">(אורח/ת)</span>
               </span>
@@ -159,7 +169,7 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
               key={member.id}
               className={cn(
                 "flex items-center justify-between p-3 rounded-lg border transition-colors",
-                isRegistered ? "bg-green-50 border-green-200" : "bg-muted/30"
+                isRegistered ? "bg-green-50 dark:bg-green-500/25 border-green-200 dark:border-green-500/50" : "bg-muted/30"
               )}
             >
               <span className="font-medium">{member.name}</span>
