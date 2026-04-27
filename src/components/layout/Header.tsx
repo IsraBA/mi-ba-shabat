@@ -5,7 +5,7 @@ import { Member } from "@/types";
 import { useMember } from "@/hooks/useMember";
 import { createClient } from "@/lib/supabase/client";
 import { FaUser } from "react-icons/fa6";
-import { TbCandle } from "react-icons/tb";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 // App header with title and current member display (no switch option)
@@ -37,11 +37,8 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-background border-b">
       <div className="flex items-center justify-between px-4 h-14">
         {/* App title with Shabbat candles icon */}
-        <h1 className="text-lg font-bold flex items-center gap-0.75">
-          <span className="flex -space-x-3 mb-0.5">
-            <TbCandle className="w-5 h-5 text-amber-500" />
-            <TbCandle className="w-5 h-5 text-amber-500" />
-          </span>
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <Image src="/icons/logo-transparent.png" alt="" width={28} height={28} />
           מי בא שבת
         </h1>
 
