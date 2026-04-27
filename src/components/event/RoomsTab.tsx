@@ -200,8 +200,8 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
     }
   }
 
-  // Registered members eligible for room assignment (exclude parents — they live there)
-  const registeredMembers = members.filter((m) => registeredIds.has(m.id) && !m.always_attending);
+  // Registered members eligible for room assignment (exclude members flagged as not needing one — e.g. parents)
+  const registeredMembers = members.filter((m) => registeredIds.has(m.id) && !m.no_room_assignment);
   const unassignedMembers = registeredMembers.filter((m) => !assignedMemberIds.has(m.id));
 
   const canEdit = isAdmin(currentMember) && !past;
@@ -303,6 +303,7 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
                 <div className="mt-2 space-y-2">
                   <Select<SelectOption, true>
                     isMulti
+                    unstyled
                     options={getOptionsForRoom(room.id)}
                     defaultValue={roomMembers.map((m) => ({
                       value: m.id,
@@ -317,11 +318,35 @@ export function RoomsTab({ eventDate }: RoomsTabProps) {
                     placeholder="בחירת ילדים..."
                     noOptionsMessage={noOptionsMessage}
                     className="text-sm"
-                    classNamePrefix="rs"
                     menuPortalTarget={typeof document !== "undefined" ? document.body : null}
                     styles={{
                       menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                      control: (base) => ({ ...base, minHeight: 36 }),
+                    }}
+                    classNames={{
+                      control: ({ isFocused }) =>
+                        cn(
+                          "min-h-9 px-2 rounded-md border bg-background",
+                          isFocused ? "ring-2 ring-ring border-ring" : "border-input"
+                        ),
+                      valueContainer: () => "gap-1 py-1",
+                      input: () => "text-foreground",
+                      placeholder: () => "text-muted-foreground",
+                      multiValue: () => "rounded bg-muted text-foreground px-2 py-0.5 text-xs",
+                      multiValueLabel: () => "",
+                      multiValueRemove: () => "ms-1 rounded hover:bg-destructive/20 hover:text-destructive cursor-pointer",
+                      indicatorsContainer: () => "text-muted-foreground",
+                      indicatorSeparator: () => "bg-border mx-1 w-px",
+                      dropdownIndicator: () => "p-1 hover:text-foreground cursor-pointer",
+                      clearIndicator: () => "p-1 hover:text-foreground cursor-pointer",
+                      menu: () => "mt-1 rounded-md border bg-popover text-popover-foreground shadow-md overflow-hidden",
+                      menuList: () => "py-1",
+                      option: ({ isFocused, isSelected }) =>
+                        cn(
+                          "px-3 py-2 cursor-pointer",
+                          isSelected && "bg-primary text-primary-foreground",
+                          !isSelected && isFocused && "bg-accent text-accent-foreground"
+                        ),
+                      noOptionsMessage: () => "px-3 py-2 text-muted-foreground text-sm",
                     }}
                   />
                   <Button

@@ -7,6 +7,7 @@ export interface Member {
   name: string;
   is_admin: boolean;
   always_attending: boolean;
+  no_room_assignment: boolean;
   gender: Gender;
   display_order: number;
   created_at: string;
