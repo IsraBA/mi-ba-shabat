@@ -11,7 +11,6 @@ import {
   nextHebrewMonth,
   prevHebrewMonth,
   getCurrentHebrewDate,
-  isPastDate,
   CalendarEvent,
 } from "@/lib/hebcal";
 import { HDate } from "@hebcal/core";
@@ -178,7 +177,12 @@ export function HebrewCalendar() {
           const dateStr = day.date.toISOString().split("T")[0];
           const event = eventMap.get(dateStr);
           const isToday = mounted && day.date.toDateString() === today.toDateString();
-          const past = isPastDate(day.date);
+          // Compute "past" against the client-mounted `today` so SSG doesn't bake build-time as the cutoff
+          const todayMidnight = new Date(today);
+          todayMidnight.setHours(0, 0, 0, 0);
+          const dayMidnight = new Date(day.date);
+          dayMidnight.setHours(0, 0, 0, 0);
+          const past = mounted && dayMidnight < todayMidnight;
           const isSaturday = day.date.getDay() === 6;
           const regCount = registrationCounts[dateStr] || 0;
           const isMyReg = myRegistrations.has(dateStr);
