@@ -79,22 +79,24 @@ export function getHebrewMonthDays(hebrewYear: number, hebrewMonth: number) {
   return { days, firstDayOfWeek, daysInMonth };
 }
 
-// Navigate to next Hebrew month
+// Navigate to next Hebrew month chronologically. HDate.add() handles the Tishrei-based
+// civil-year boundary correctly (Elul -> Tishrei rolls the year forward), unlike raw
+// month-number arithmetic which would treat Elul (6) -> Tishrei (7) as the same year.
 export function nextHebrewMonth(hebrewYear: number, hebrewMonth: number): { year: number; month: number } {
-  const monthsInYear = HDate.monthsInYear(hebrewYear);
-  if (hebrewMonth >= monthsInYear) {
-    return { year: hebrewYear + 1, month: 1 };
-  }
-  return { year: hebrewYear, month: hebrewMonth + 1 };
+  const next = new HDate(1, hebrewMonth, hebrewYear).add(1, "M");
+  return { year: next.getFullYear(), month: next.getMonth() };
 }
 
-// Navigate to previous Hebrew month
+// Navigate to previous Hebrew month chronologically. Avoid HDate.add(-1, 'M') here:
+// it subtracts daysInMonth(current), so from day 1 of a 30-day month it lands TWO
+// months back when the previous month has only 29 days. Stepping back one Gregorian
+// day from the first of the month always lands on the last day of the prior Hebrew month.
 export function prevHebrewMonth(hebrewYear: number, hebrewMonth: number): { year: number; month: number } {
-  if (hebrewMonth <= 1) {
-    const prevYear = hebrewYear - 1;
-    return { year: prevYear, month: HDate.monthsInYear(prevYear) };
-  }
-  return { year: hebrewYear, month: hebrewMonth - 1 };
+  const firstOfThis = new HDate(1, hebrewMonth, hebrewYear).greg();
+  const back = new Date(firstOfThis);
+  back.setDate(back.getDate() - 1);
+  const prev = new HDate(back);
+  return { year: prev.getFullYear(), month: prev.getMonth() };
 }
 
 // Check if a given date is a major Jewish holiday
