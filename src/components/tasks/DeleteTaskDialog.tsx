@@ -22,12 +22,19 @@ export function DeleteTaskDialog({ task, onClose, onDeleted }: DeleteTaskDialogP
     setIsDeleting(true);
     const supabase = createClient();
 
-    // Delete this specific task instance
-    await supabase.from("event_tasks").delete().eq("id", task.id);
-
-    // If user chose to delete from all future events, also delete the template
+    // If deleting from all future events, remove every instance from today onward
+    // (covers events that were already generated before the template was deleted)
     if (deleteFromAll && task.template_id) {
+      const today = new Date().toISOString().slice(0, 10);
+      await supabase
+        .from("event_tasks")
+        .delete()
+        .eq("template_id", task.template_id)
+        .gte("event_date", today);
       await supabase.from("task_templates").delete().eq("id", task.template_id);
+    } else {
+      // Delete only this specific task instance
+      await supabase.from("event_tasks").delete().eq("id", task.id);
     }
 
     onDeleted();

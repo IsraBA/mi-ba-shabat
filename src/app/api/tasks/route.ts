@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (template) templateId = template.id;
   }
 
-  // Create the task instance
+  // Create the task instance for the requested event
   const { data, error } = await supabase
     .from("event_tasks")
     .insert({
@@ -72,6 +72,33 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // If recurring, propagate to every other future event that was already generated
+  // (mirrors the delete-from-future flow so the template appears symmetrically)
+  if (is_recurring && templateId) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: futureRows } = await supabase
+      .from("event_tasks")
+      .select("event_date")
+      .gte("event_date", today)
+      .neq("event_date", event_date);
+
+    const otherDates = Array.from(
+      new Set((futureRows ?? []).map((r) => r.event_date))
+    );
+
+    if (otherDates.length > 0) {
+      const newRows = otherDates.map((d) => ({
+        event_date: d,
+        template_id: templateId,
+        name,
+        category,
+        icon,
+        color,
+      }));
+      await supabase.from("event_tasks").insert(newRows);
+    }
   }
 
   return NextResponse.json(data, { status: 201 });
