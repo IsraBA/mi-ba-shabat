@@ -44,7 +44,7 @@ export default function EventPage({ params }: EventPageProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/calendar")}
+          onClick={() => router.back()}
           className="gap-1"
         >
           <FaArrowRight className="w-3 h-3" />

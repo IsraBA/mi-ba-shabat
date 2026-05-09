@@ -46,14 +46,38 @@ export function HebrewCalendar() {
   const [myRegistrations, setMyRegistrations] = useState<Set<string>>(new Set());
   const { memberId } = useMember();
 
-  // Re-sync today and current Hebrew month on client mount (fixes stale dates from SSG/cached HTML)
+  // On client mount: re-sync today, then read ?date=YYYY-MM-DD from URL (if any) to
+  // pick the displayed month — supports deep links and browser back/forward keeping
+  // calendar state in sync with the URL.
   useEffect(() => {
     const now = new Date();
     setToday(now);
-    const heb = getCurrentHebrewDate();
-    setHebYear(heb.year);
-    setHebMonth(heb.month);
+
+    // Read URL date param and project it onto a Hebrew month, falling back to today
+    const applyFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const dateParam = params.get("date");
+      if (dateParam) {
+        const d = new Date(dateParam + "T00:00:00");
+        if (!isNaN(d.getTime())) {
+          const hd = new HDate(d);
+          setHebYear(hd.getFullYear());
+          setHebMonth(hd.getMonth());
+          return;
+        }
+      }
+      const heb = getCurrentHebrewDate();
+      setHebYear(heb.year);
+      setHebMonth(heb.month);
+    };
+
+    applyFromUrl();
     setMounted(true);
+
+    // Keep state in sync when the user uses browser back/forward
+    const onPopState = () => applyFromUrl();
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   // Get month info for display
@@ -68,8 +92,13 @@ export function HebrewCalendar() {
     ? `${gregStartMonth} ${gregYear}`
     : `${gregStartMonth}–${gregEndMonth} ${gregYear}`;
 
-  // Fetch calendar events and registration data
+  // Fetch calendar events and registration data. Wait until `mounted` so we don't
+  // fire a request for the SSR-default current month and have it race / overwrite
+  // the request for the URL-derived month after the mount-time URL parse.
   useEffect(() => {
+    if (!mounted) return;
+    let cancelled = false;
+
     const calEvents = getEventsForDateRange(monthStart, monthEnd);
     setEvents(calEvents);
 
@@ -78,8 +107,10 @@ export function HebrewCalendar() {
       const supabase = createClient();
       const eventDates = calEvents.map((e) => e.dateString);
       if (eventDates.length === 0) {
-        setRegistrationCounts({});
-        setMyRegistrations(new Set());
+        if (!cancelled) {
+          setRegistrationCounts({});
+          setMyRegistrations(new Set());
+        }
         return;
       }
 
@@ -88,6 +119,7 @@ export function HebrewCalendar() {
         .select("event_date, member_id")
         .in("event_date", eventDates);
 
+      if (cancelled) return;
       if (data) {
         const counts: Record<string, number> = {};
         const myRegs = new Set<string>();
@@ -103,21 +135,57 @@ export function HebrewCalendar() {
     }
 
     fetchRegistrations();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hebYear, hebMonth, memberId]);
+  }, [hebYear, hebMonth, memberId, mounted]);
+
+  // Move to a target Hebrew month while keeping the back stack hierarchical:
+  //   level 1 — /calendar (current month)
+  //   level 2 — /calendar?date=... (other month)
+  // Same-level moves use replace (no stacking); first move off level 1 uses push;
+  // returning to level 1 uses back() so the level-2 entry is popped instead of stacked.
+  const navigateToMonth = (year: number, month: number) => {
+    const cur = getCurrentHebrewDate();
+    const targetIsCurrent = year === cur.year && month === cur.month;
+    const hasDateParam = new URLSearchParams(window.location.search).has("date");
+
+    setHebYear(year);
+    setHebMonth(month);
+
+    if (targetIsCurrent) {
+      // Returning to the current month from a non-current one — pop level 2 off the stack
+      if (hasDateParam) router.back();
+      return;
+    }
+
+    // First day of the target Hebrew month, formatted as YYYY-MM-DD for the URL
+    const greg = new HDate(1, month, year).greg();
+    const yyyy = greg.getFullYear();
+    const mm = String(greg.getMonth() + 1).padStart(2, "0");
+    const dd = String(greg.getDate()).padStart(2, "0");
+    const url = `/calendar?date=${yyyy}-${mm}-${dd}`;
+
+    if (hasDateParam) {
+      // Already at level 2 — swap the displayed month without growing history
+      router.replace(url);
+    } else {
+      // Stepping from level 1 to level 2 — push so back returns to current month
+      router.push(url);
+    }
+  };
 
   // Navigate to next Hebrew month (RTL: left arrow = forward in time)
   const goNext = () => {
     const next = nextHebrewMonth(hebYear, hebMonth);
-    setHebYear(next.year);
-    setHebMonth(next.month);
+    navigateToMonth(next.year, next.month);
   };
 
   // Navigate to previous Hebrew month (RTL: right arrow = backward in time)
   const goPrev = () => {
     const prev = prevHebrewMonth(hebYear, hebMonth);
-    setHebYear(prev.year);
-    setHebMonth(prev.month);
+    navigateToMonth(prev.year, prev.month);
   };
 
   // Get Hebrew month grid data
