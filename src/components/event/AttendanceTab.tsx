@@ -311,6 +311,9 @@ function DeleteGuestDialog({
           האם למחוק את האורח/ת <strong>&quot;{guest.name}&quot;</strong>?
         </p>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            ביטול
+          </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
@@ -318,9 +321,6 @@ function DeleteGuestDialog({
             className="flex-1"
           >
             {isDeleting ? "מוחק..." : "מחיקה"}
-          </Button>
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            ביטול
           </Button>
         </div>
       </div>

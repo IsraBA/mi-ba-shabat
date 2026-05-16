@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { Member } from "@/types";
 import { useMember } from "@/hooks/useMember";
 import { createClient } from "@/lib/supabase/client";
-import { FaUser } from "react-icons/fa6";
+import { FaUser, FaGear } from "react-icons/fa6";
 import Image from "next/image";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import Link from "next/link";
 
 // App header with title and current member display (no switch option)
 export function Header() {
@@ -36,11 +36,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-background border-b">
       <div className="flex items-center justify-between px-4 h-14">
-        {/* App title with Shabbat candles icon */}
-        <h1 className="text-lg font-bold flex items-center gap-2">
+        {/* App title with Shabbat candles icon — clickable, returns to current-month calendar */}
+        <Link href="/calendar" className="text-lg font-bold flex items-center gap-2">
           <Image src="/icons/logo-transparent.png" alt="" width={28} height={28} />
-          מי בא שבת
-        </h1>
+          <h1>מי בא שבת</h1>
+        </Link>
 
         {/* Current member indicator + theme toggle */}
         <div className="flex items-center gap-2">
@@ -50,7 +50,14 @@ export function Header() {
               <span>{currentMember.name}</span>
             </div>
           )}
-          <ThemeToggle />
+          <Link
+            href="/settings"
+            aria-label="הגדרות"
+            title="הגדרות"
+            className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <FaGear className="w-4 h-4" />
+          </Link>
         </div>
       </div>
     </header>

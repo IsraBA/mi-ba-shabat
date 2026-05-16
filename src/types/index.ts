@@ -99,6 +99,18 @@ export interface PushSubscription {
   created_at: string;
 }
 
+// Family member's Hebrew birthday (stored separately from `members` so we can track
+// people who aren't app users — newborns, in-laws, etc.)
+export interface Birthday {
+  id: string;
+  name: string;
+  hebrew_year: number;
+  hebrew_month: number; // 1-13 in @hebcal/core convention; 12=Adar/Adar I, 13=Adar II
+  hebrew_day: number;
+  display_order: number;
+  created_at: string;
+}
+
 // Category display configuration
 export interface CategoryConfig {
   key: TaskCategory;

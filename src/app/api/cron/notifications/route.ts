@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { HDate } from "@hebcal/core";
 import { createClient } from "@/lib/supabase/server";
 import { sendPushToMembers } from "@/lib/push";
 import {
@@ -6,8 +7,10 @@ import {
   registrationReminderUrgent,
   fridaySummary,
   taskKing,
+  birthdayEve,
 } from "@/lib/notifications";
-import { Gender } from "@/types";
+import { birthdayInYear } from "@/lib/birthdays";
+import { Gender, type Birthday } from "@/types";
 
 // Verify cron secret to prevent unauthorized calls
 function verifyCron(request: NextRequest): boolean {
@@ -174,6 +177,47 @@ export async function GET(request: NextRequest) {
       await sendPushToMembers(everyoneIds, payload);
 
       return NextResponse.json({ sent: everyoneIds.length, type, topMember: topMember.name });
+    }
+
+    // Daily 20:15 IL — eve-of-birthday push to everyone for any matching birthday tomorrow
+    case "birthday_eve": {
+      // Tomorrow's Hebrew date (in Israel time) — birth-day match is computed per stored birthday
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowHd = new HDate(tomorrow);
+      const tomorrowYear = tomorrowHd.getFullYear();
+
+      const { data: birthdays } = await supabase
+        .from("birthdays")
+        .select("*");
+
+      if (!birthdays || birthdays.length === 0) {
+        return NextResponse.json({ sent: 0, message: "No birthdays" });
+      }
+
+      const matches = (birthdays as Birthday[]).filter((b) => {
+        const occ = birthdayInYear(b, tomorrowYear);
+        return occ.month === tomorrowHd.getMonth() && occ.day === tomorrowHd.getDate();
+      });
+
+      if (matches.length === 0) {
+        return NextResponse.json({ sent: 0, message: "No matches tomorrow" });
+      }
+
+      const everyoneIds = allMembers.map((m) => m.id);
+      let totalSent = 0;
+      for (const b of matches) {
+        const occ = birthdayInYear(b, tomorrowYear);
+        const payload = birthdayEve(b.name, occ.age);
+        const res = await sendPushToMembers(everyoneIds, payload);
+        totalSent += res.sent;
+      }
+
+      return NextResponse.json({
+        sent: totalSent,
+        type,
+        names: matches.map((b) => b.name),
+      });
     }
 
     default:

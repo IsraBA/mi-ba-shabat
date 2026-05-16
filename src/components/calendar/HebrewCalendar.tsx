@@ -19,6 +19,9 @@ import { useMember } from "@/hooks/useMember";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { birthdaysForDateRange } from "@/lib/birthdays";
+import type { Birthday } from "@/types";
+import { FaCakeCandles } from "react-icons/fa6";
 
 // Hebrew day-of-week headers (Sunday to Saturday)
 const DAY_HEADERS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
@@ -44,6 +47,7 @@ export function HebrewCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({});
   const [myRegistrations, setMyRegistrations] = useState<Set<string>>(new Set());
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const { memberId } = useMember();
 
   // On client mount: re-sync today, then read ?date=YYYY-MM-DD from URL (if any) to
@@ -73,6 +77,17 @@ export function HebrewCalendar() {
 
     applyFromUrl();
     setMounted(true);
+
+    // Fetch the family birthdays once — they're year-agnostic, computed per visible day
+    async function fetchBirthdays() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("birthdays")
+        .select("*")
+        .order("display_order", { ascending: true });
+      if (data) setBirthdays(data);
+    }
+    fetchBirthdays();
 
     // Keep state in sync when the user uses browser back/forward
     const onPopState = () => applyFromUrl();
@@ -197,6 +212,9 @@ export function HebrewCalendar() {
     eventMap.set(ev.dateString, ev);
   }
 
+  // Map of YYYY-MM-DD -> birthdays occurring on that day, computed per visible month
+  const birthdayMap = birthdaysForDateRange(birthdays, monthStart, monthEnd);
+
   // Navigate to event detail page
   const handleDayClick = (dateStr: string) => {
     if (eventMap.has(dateStr)) {
@@ -254,6 +272,7 @@ export function HebrewCalendar() {
           const isSaturday = day.date.getDay() === 6;
           const regCount = registrationCounts[dateStr] || 0;
           const isMyReg = myRegistrations.has(dateStr);
+          const dayBirthdays = birthdayMap.get(dateStr);
           const isClickable = !!event;
 
           return (
@@ -301,6 +320,22 @@ export function HebrewCalendar() {
                       {regCount} מגיעים
                     </Badge>
                   )}
+                </div>
+              )}
+
+              {/* Birthday badge — overlaid like a meta-event, independent of registrations */}
+              {dayBirthdays && dayBirthdays.length > 0 && (
+                <div className={cn("flex flex-col gap-0.5", event ? "mt-0.5" : "mt-auto")}>
+                  {dayBirthdays.map((bd) => (
+                    <Badge
+                      key={bd.name}
+                      variant="secondary"
+                      className="text-[9px] px-1.5 py-0.5 gap-1 h-auto leading-tight rounded-sm flex-col md:flex-row items-center justify-center whitespace-normal wrap-break-word text-center bg-pink-100 text-pink-700 dark:bg-pink-500/25 dark:text-pink-200"
+                    >
+                      <FaCakeCandles className="w-2 h-2 shrink-0" />
+                      <span className="mt-[1.5px]">יום הולדת {bd.age} ל{bd.name}</span>
+                    </Badge>
+                  ))}
                 </div>
               )}
             </div>

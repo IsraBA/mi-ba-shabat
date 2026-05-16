@@ -99,3 +99,11 @@ export function taskKing(topMemberName: string, topMemberGender: Gender, eventTy
     body: `הריעו לשיראל השבוע 👏 ${detail}`,
   };
 }
+
+// 9. Birthday eve — sent the night before someone's Hebrew birthday
+export function birthdayEve(name: string, age: number): NotificationPayload {
+  return {
+    title: APP_TITLE,
+    body: `מזל טוב! יום הולדת ${age} ל${name} 🎊`,
+  };
+}

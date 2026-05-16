@@ -66,6 +66,9 @@ export function DeleteTaskDialog({ task, onClose, onDeleted }: DeleteTaskDialogP
         )}
 
         <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            ביטול
+          </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
@@ -73,9 +76,6 @@ export function DeleteTaskDialog({ task, onClose, onDeleted }: DeleteTaskDialogP
             className="flex-1"
           >
             {isDeleting ? "מוחק..." : "מחיקה"}
-          </Button>
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            ביטול
           </Button>
         </div>
       </div>
