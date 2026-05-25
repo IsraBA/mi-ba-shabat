@@ -107,3 +107,23 @@ export function birthdayEve(name: string, age: number): NotificationPayload {
     body: `מזל טוב! יום הולדת ${age} ל${name} 🎊`,
   };
 }
+
+// 10. Admin registered the recipient for the event — sent personally to the target
+export function registeredByAdmin(adminName: string, adminGender: Gender, eventType: "shabbat" | "holiday"): NotificationPayload {
+  const ev = eventLabel(eventType, "ל");
+  const verb = gendered(adminGender, "רשם", "רשמה", "רשמו");
+  return {
+    title: APP_TITLE,
+    body: `${adminName} ${verb} אותך ${ev}`,
+  };
+}
+
+// 11. Admin cancelled the recipient's registration — sent personally to the target
+export function cancelledByAdmin(adminName: string, adminGender: Gender, eventType: "shabbat" | "holiday"): NotificationPayload {
+  const ev = eventLabel(eventType, "ל");
+  const verb = gendered(adminGender, "ביטל", "ביטלה", "ביטלו");
+  return {
+    title: APP_TITLE,
+    body: `${adminName} ${verb} את הגעתך ${ev}`,
+  };
+}

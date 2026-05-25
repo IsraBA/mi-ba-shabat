@@ -11,7 +11,7 @@ import { attendingBadge, notAttendingBadge } from "@/lib/gender";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalTitle } from "@/components/ui/modal";
-import { FaPlus, FaTrash, FaUserPlus } from "react-icons/fa6";
+import { FaPlus, FaTrash, FaUserPlus, FaCheck, FaXmark } from "react-icons/fa6";
 import { cn } from "@/lib/utils";
 
 interface AttendanceTabProps {
@@ -41,7 +41,72 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
   const [membersLoading, setMembersLoading] = useState(true);
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [deletingGuest, setDeletingGuest] = useState<EventGuest | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const past = isPastDate(new Date(eventDate));
+
+  // Is the current user an admin? Used to render per-member registration toggles.
+  const currentMember = members.find((m) => m.id === memberId);
+  const isCurrentUserAdmin = currentMember?.is_admin ?? false;
+
+  // Admin action: toggle another member's registration for this event.
+  // Mirrors RegistrationButton's logic (opt-out write order matters to avoid auto re-register race).
+  const handleAdminToggle = async (target: Member, currentlyRegistered: boolean) => {
+    setTogglingId(target.id);
+    try {
+      const supabase = createClient();
+
+      if (currentlyRegistered) {
+        // Write opt-out before delete so realtime won't auto re-register
+        const { error: optOutError } = await supabase
+          .from("event_opt_outs")
+          .upsert(
+            { member_id: target.id, event_date: eventDate },
+            { onConflict: "member_id,event_date" }
+          );
+        if (optOutError) {
+          alert("שגיאה ברישום ביטול: " + optOutError.message);
+          return;
+        }
+        await supabase
+          .from("event_registrations")
+          .delete()
+          .eq("member_id", target.id)
+          .eq("event_date", eventDate);
+      } else {
+        // Clear any prior opt-out before inserting registration
+        await supabase
+          .from("event_opt_outs")
+          .delete()
+          .eq("member_id", target.id)
+          .eq("event_date", eventDate);
+        await supabase
+          .from("event_registrations")
+          .insert({ member_id: target.id, event_date: eventDate });
+      }
+
+      // If admin acted on someone else, use the by-admin trigger so the target
+      // gets a personal "X רשמה אותך" note in addition to the regular broadcast.
+      // If admin toggled their own row, fall back to the standard trigger.
+      const isSelf = target.id === memberId;
+      fetch("/api/notifications/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: isSelf
+            ? currentlyRegistered ? "member_cancelled" : "member_registered"
+            : currentlyRegistered ? "cancelled_by_admin" : "registered_by_admin",
+          member_id: target.id,
+          admin_id: isSelf ? undefined : memberId,
+          event_date: eventDate,
+          event_type: eventType,
+        }),
+      }).catch(() => {});
+
+      refetch();
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   // Fetch members and guests (does NOT auto-register — that's a separate one-shot effect below)
   const fetchData = useCallback(async () => {
@@ -164,6 +229,7 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
       <div className="space-y-2">
         {members.map((member) => {
           const isRegistered = registeredIds.has(member.id);
+          const isToggling = togglingId === member.id;
           return (
             <div
               key={member.id}
@@ -173,18 +239,39 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
               )}
             >
               <span className="font-medium">{member.name}</span>
-              <Badge
-                variant={isRegistered ? "default" : "secondary"}
-                className={cn(
-                  isRegistered
-                    ? "bg-green-600 hover:bg-green-600 text-white"
-                    : "bg-muted text-muted-foreground"
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={isRegistered ? "default" : "secondary"}
+                  className={cn(
+                    isRegistered
+                      ? "bg-green-600 hover:bg-green-600 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isRegistered
+                    ? attendingBadge(member.gender)
+                    : notAttendingBadge(member.gender)}
+                </Badge>
+                {/* Admin-only per-member toggle (hidden on past events) */}
+                {isCurrentUserAdmin && !past && (
+                  <Button
+                    variant={isRegistered ? "destructive" : "default"}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    disabled={isToggling}
+                    onClick={() => handleAdminToggle(member, isRegistered)}
+                    aria-label={isRegistered ? "ביטול רישום" : "רישום"}
+                  >
+                    {isToggling ? (
+                      "..."
+                    ) : isRegistered ? (
+                      <FaXmark className="w-3 h-3" />
+                    ) : (
+                      <FaCheck className="w-3 h-3" />
+                    )}
+                  </Button>
                 )}
-              >
-                {isRegistered
-                  ? attendingBadge(member.gender)
-                  : notAttendingBadge(member.gender)}
-              </Badge>
+              </div>
             </div>
           );
         })}
