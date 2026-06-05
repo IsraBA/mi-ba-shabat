@@ -5,6 +5,8 @@ import {
   flags,
   Location,
   gematriya,
+  CandleLightingEvent,
+  HavdalahEvent,
 } from "@hebcal/core";
 
 // Represents a Shabbat or holiday event from the Hebrew calendar
@@ -14,7 +16,12 @@ export interface CalendarEvent {
   type: "shabbat" | "holiday";
   title: string;
   hebrewDate: string;
+  candleLighting?: string; // Entry time "HH:MM" (Tel Aviv), if available
+  havdalah?: string; // Exit time "HH:MM" (Tel Aviv), if available
 }
+
+// One day in milliseconds — used for eve/next-day lookups
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Hebrew month names
 const HEBREW_MONTH_NAMES = [
@@ -106,6 +113,58 @@ function isMajorHoliday(ev: Event): boolean {
   return (ev.getFlags() & majorHolidayFlags) !== 0;
 }
 
+// Tel Aviv location for candle-lighting / havdalah calculations (tz Asia/Jerusalem)
+const TIMES_LOCATION = Location.lookup("Tel Aviv");
+
+// Build maps of candle-lighting and havdalah times ("HH:MM") keyed by date string.
+// Uses a dedicated, unmasked calendar pass because regular Shabbat candle-lighting
+// (flag LIGHT_CANDLES) would otherwise be filtered out by the main query's mask.
+function getShabbatTimeMaps(start: Date, end: Date): {
+  candleByDate: Map<string, string>;
+  havdalahByDate: Map<string, string>;
+} {
+  const candleByDate = new Map<string, string>();
+  const havdalahByDate = new Map<string, string>();
+
+  if (!TIMES_LOCATION) return { candleByDate, havdalahByDate };
+
+  // Pad the range so times on the boundary days (e.g., the Friday before `start`) are captured
+  const events = HebrewCalendar.calendar({
+    start: new Date(start.getTime() - DAY_MS),
+    end: new Date(end.getTime() + DAY_MS),
+    candlelighting: true,
+    location: TIMES_LOCATION,
+    il: true,
+    locale: "he",
+  });
+
+  for (const ev of events) {
+    const dateStr = toDateString(ev.getDate().greg());
+    if (ev instanceof CandleLightingEvent) {
+      candleByDate.set(dateStr, ev.fmtTime);
+    } else if (ev instanceof HavdalahEvent) {
+      havdalahByDate.set(dateStr, ev.fmtTime);
+    }
+  }
+
+  return { candleByDate, havdalahByDate };
+}
+
+// Attach candle-lighting (entry) and havdalah (exit) times to each event.
+// Candle-lighting is on the eve (day before); havdalah on the day the event ends.
+// Same-day candle and next-day havdalah fallbacks cover single- and multi-day holidays.
+function attachShabbatTimes(events: CalendarEvent[], start: Date, end: Date): void {
+  const { candleByDate, havdalahByDate } = getShabbatTimeMaps(start, end);
+
+  for (const ev of events) {
+    const sameDay = ev.dateString;
+    const eve = toDateString(new Date(ev.date.getTime() - DAY_MS));
+    const nextDay = toDateString(new Date(ev.date.getTime() + DAY_MS));
+    ev.candleLighting = candleByDate.get(eve) ?? candleByDate.get(sameDay);
+    ev.havdalah = havdalahByDate.get(sameDay) ?? havdalahByDate.get(nextDay);
+  }
+}
+
 // Get all Shabbat and holiday events for a date range
 export function getEventsForDateRange(start: Date, end: Date): CalendarEvent[] {
   const options = {
@@ -183,6 +242,10 @@ export function getEventsForDateRange(start: Date, end: Date): CalendarEvent[] {
   }
 
   result.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // Add candle-lighting and havdalah times to each event
+  attachShabbatTimes(result, start, end);
+
   return result;
 }
 

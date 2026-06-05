@@ -2,6 +2,8 @@
 
 import { CalendarEvent } from "@/lib/hebcal";
 import { Badge } from "@/components/ui/badge";
+import { TbCandleFilled } from "react-icons/tb";
+import { BsMoonStarsFill } from "react-icons/bs";
 
 interface EventHeaderProps {
   event: CalendarEvent;
@@ -39,6 +41,33 @@ export function EventHeader({ event }: EventHeaderProps) {
 
       {/* Gregorian date */}
       <p className="text-sm text-muted-foreground">{gregDate}</p>
+
+      {/* Candle-lighting (entry) and havdalah (exit) times */}
+      {(event.candleLighting || event.havdalah) && (
+        <div className="mt-3 flex items-center justify-center gap-5 text-sm">
+          {event.candleLighting && (
+            <span className="flex items-center gap-1">
+              <span className="flex text-violet-500 mb-0.5">
+                <TbCandleFilled className="w-3.5 h-3.5" />
+                <TbCandleFilled className="w-3.5 h-3.5 -ms-2" />
+              </span>
+              <span className="text-muted-foreground">
+                {event.type === "shabbat" ? "כניסת שבת" : "כניסת החג"}
+              </span>
+              <span className="font-medium ms-0.5">{event.candleLighting}</span>
+            </span>
+          )}
+          {event.havdalah && (
+            <span className="flex items-center gap-1">
+              <BsMoonStarsFill className="w-3.5 h-3.5 text-violet-500 mb-0.5" />
+              <span className="text-muted-foreground">
+                {event.type === "shabbat" ? "יציאת שבת" : "יציאת החג"}
+              </span>
+              <span className="font-medium ms-0.5">{event.havdalah}</span>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
