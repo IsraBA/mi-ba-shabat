@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const member_id = searchParams.get("member_id");
+  const endpoint = searchParams.get("endpoint");
 
   if (!member_id) {
     return NextResponse.json(
@@ -51,10 +52,17 @@ export async function DELETE(request: NextRequest) {
 
   const supabase = await createClient();
 
-  await supabase
+  let query = supabase
     .from("push_subscriptions")
     .delete()
     .eq("member_id", member_id);
+
+  // If an endpoint is given, delete only that subscription (preserve other devices)
+  if (endpoint) {
+    query = query.filter("subscription->>endpoint", "eq", endpoint);
+  }
+
+  await query;
 
   return NextResponse.json({ success: true });
 }
