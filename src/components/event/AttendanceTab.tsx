@@ -206,7 +206,7 @@ export function AttendanceTab({ eventDate, eventType }: AttendanceTabProps) {
               className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 dark:bg-blue-500/25 border-blue-200 dark:border-blue-500/50"
             >
               <span className="font-medium flex items-center gap-2">
-                <FaUserPlus className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                <FaUserPlus className="w-3.5 h-3.5 min-w-3.5 min-h-3.5 text-blue-500 dark:text-blue-400" />
                 {guest.name}
                 <span className="text-xs text-muted-foreground">(אורח/ת)</span>
               </span>
